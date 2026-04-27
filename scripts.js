@@ -1,56 +1,103 @@
-export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ erro: "Método não permitido" })
-  }
+const button = document.querySelector('.botao-gerar')
+const textarea = document.querySelector('.caixa-texto')
+const status = document.querySelector('.status')
 
-  try {
-    const { prompt } = req.body
+const iframeCodigo = document.querySelector('.iframe-codigo')
+const resultadoCodigo = document.querySelector('.resultado-codigo')
+const botaoCopiar = document.querySelector('.botao-copiar')
 
-    if (!prompt) {
-      return res.status(400).json({ erro: "Prompt vazio" })
+let codigoParaCopiar = ""
+
+async function gerarCodigo() {
+    const textoUsuario = textarea.value.trim()
+
+    if (!textoUsuario) {
+        status.innerText = "Digite algo primeiro 😅"
+        return
     }
 
-    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${process.env.GROQ_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "llama3-70b-8192",
-        messages: [
-          {
-            role: "system",
-            content: `
-Você é um gerador de código HTML e CSS.
-Responda APENAS com código.
-Não escreva explicações.
-Crie algo visual e, se possível, animado.
-`
-          },
-          {
-            role: "user",
-            content: prompt
-          }
-        ]
-      })
-    })
+    button.disabled = true
+    status.innerText = "Gerando com IA..."
 
-    const data = await response.json()
+    try {
+        const resposta = await fetch("/api/gerar", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ prompt: textoUsuario })
+        })
 
-    const codigo = data?.choices?.[0]?.message?.content
+        const dados = await resposta.json()
 
-    if (!codigo) {
-      throw new Error("Resposta vazia da IA")
+        if (!dados.codigo) {
+            throw new Error("Resposta inválida da API")
+        }
+
+        let codigoGerado = dados.codigo
+            .replace(/```html|```/g, "") // limpa markdown
+            .trim()
+
+        codigoParaCopiar = codigoGerado
+
+        status.innerText = "Código gerado com sucesso 🚀"
+
+        // Mostrar código (escapado)
+        iframeCodigo.srcdoc = `
+        <!DOCTYPE html>
+        <html>
+        <body style="background:#1e1e1e;color:#fff;font-family:monospace;padding:20px;">
+        <pre>${codigoGerado
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')}
+        </pre>
+        </body>
+        </html>
+        `
+
+        // Mostrar resultado funcionando
+        resultadoCodigo.srcdoc = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+        <meta charset="UTF-8">
+        </head>
+        <body>
+        ${codigoGerado}
+        </body>
+        </html>
+        `
+
+    } catch (erro) {
+        console.error(erro)
+
+        status.innerText = "Erro ao gerar código 😢"
+
+        // fallback visual (muito importante pro portfólio)
+        resultadoCodigo.srcdoc = `
+        <html>
+        <body style="font-family:sans-serif;color:red;">
+        <h3>Erro ao gerar com IA</h3>
+        <p>Tente novamente</p>
+        </body>
+        </html>
+        `
+    } finally {
+        button.disabled = false
     }
-
-    return res.status(200).json({ codigo })
-
-  } catch (erro) {
-    console.error(erro)
-
-    return res.status(500).json({
-      codigo: `<p style="color:red;">Erro ao gerar código 😢</p>`
-    })
-  }
 }
+
+// Copiar código
+botaoCopiar.addEventListener('click', () => {
+    if (!codigoParaCopiar) {
+        alert("Nada para copiar ainda 😅")
+        return
+    }
+
+    navigator.clipboard.writeText(codigoParaCopiar)
+    alert("Código copiado! 🎉")
+})
+
+// Evento botão
+button.addEventListener('click', gerarCodigo)
