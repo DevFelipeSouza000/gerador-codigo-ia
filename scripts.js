@@ -28,58 +28,58 @@ async function gerarCodigo() {
             body: JSON.stringify({ prompt: textoUsuario })
         })
 
+        // 🔥 tratamento mais seguro
         const dados = await resposta.json()
 
+        if (!resposta.ok) {
+            throw new Error(dados?.erro || "Erro na API")
+        }
+
         if (!dados.codigo) {
-            throw new Error("Resposta inválida da API")
+            throw new Error("IA não retornou código")
         }
 
         let codigoGerado = dados.codigo
-            .replace(/```html|```/g, "") // limpa markdown
+            .replace(/```html|```/g, "")
             .trim()
 
         codigoParaCopiar = codigoGerado
 
         status.innerText = "Código gerado com sucesso 🚀"
 
-        // Mostrar código (escapado)
+        // 📄 preview do código
         iframeCodigo.srcdoc = `
-        <!DOCTYPE html>
-        <html>
-        <body style="background:#1e1e1e;color:#fff;font-family:monospace;padding:20px;">
-        <pre>${codigoGerado
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')}
-        </pre>
-        </body>
-        </html>
+<!DOCTYPE html>
+<html>
+<body style="background:#1e1e1e;color:#fff;font-family:monospace;padding:20px;">
+<pre>${escapeHtml(codigoGerado)}</pre>
+</body>
+</html>
         `
 
-        // Mostrar resultado funcionando
+        // 👀 preview executando
         resultadoCodigo.srcdoc = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-        <meta charset="UTF-8">
-        </head>
-        <body>
-        ${codigoGerado}
-        </body>
-        </html>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+</head>
+<body>
+${codigoGerado}
+</body>
+</html>
         `
 
     } catch (erro) {
-        console.error(erro)
+        console.error("ERRO:", erro)
 
-        status.innerText = "Erro ao gerar código 😢"
+        status.innerText = erro.message || "Erro ao gerar código 😢"
 
-        // fallback visual (muito importante pro portfólio)
         resultadoCodigo.srcdoc = `
         <html>
         <body style="font-family:sans-serif;color:red;">
         <h3>Erro ao gerar com IA</h3>
-        <p>Tente novamente</p>
+        <p>${erro.message}</p>
         </body>
         </html>
         `
@@ -88,7 +88,15 @@ async function gerarCodigo() {
     }
 }
 
-// Copiar código
+// 🔐 função de segurança (evita quebrar HTML no preview)
+function escapeHtml(text) {
+    return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+}
+
+// 📋 copiar código
 botaoCopiar.addEventListener('click', () => {
     if (!codigoParaCopiar) {
         alert("Nada para copiar ainda 😅")
@@ -99,5 +107,5 @@ botaoCopiar.addEventListener('click', () => {
     alert("Código copiado! 🎉")
 })
 
-// Evento botão
+// 🚀 evento principal
 button.addEventListener('click', gerarCodigo)
