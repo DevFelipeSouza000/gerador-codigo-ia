@@ -8,7 +8,7 @@ const botaoCopiar = document.querySelector('.botao-copiar')
 
 let codigoParaCopiar = ""
 
-async function gerarCodigo() {
+function gerarCodigo() {
     const textoUsuario = textarea.value.trim()
 
     if (!textoUsuario) {
@@ -40,12 +40,6 @@ async function gerarCodigo() {
     `
 
     resultadoCodigo.srcdoc = codigoGerado
-} catch (erro) {
-        console.error(erro)
-        status.innerText = "Erro ao gerar código 😢"
-    } finally {
-        button.disabled = false
-    }
 }
 
 // Copiar código
