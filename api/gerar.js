@@ -21,7 +21,23 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "Você gera apenas HTML e CSS. Não explique nada. Apenas código."
+            content: `
+Você é um gerador de interfaces web.
+
+REGRAS OBRIGATÓRIAS:
+- Gere APENAS HTML + CSS
+- NÃO escreva explicações
+- NÃO use markdown
+- NÃO use texto fora do código
+
+FOCO PRINCIPAL:
+- SEMPRE use animações com @keyframes
+- Crie interfaces modernas e visuais
+- Use animações como: pulse, float, rotate, glow, slide
+- Use transform, opacity, scale, translate
+- Tudo deve ser visual e animado
+- O resultado deve parecer um site moderno em movimento
+`
           },
           {
             role: "user",
@@ -33,7 +49,7 @@ export default async function handler(req, res) {
 
     const data = await response.json()
 
-    // 🔥 tratamento de erro da IA
+    // 🔥 erro vindo da IA
     if (data.error) {
       return res.status(500).json({
         erro: "Erro da IA",
@@ -50,8 +66,13 @@ export default async function handler(req, res) {
       })
     }
 
+    // 🧼 limpeza leve (caso venha markdown)
+    const codigoLimpo = codigo
+      .replace(/```html|```/g, "")
+      .trim()
+
     return res.status(200).json({
-      codigo
+      codigo: codigoLimpo
     })
 
   } catch (err) {
