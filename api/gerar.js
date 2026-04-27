@@ -10,6 +10,13 @@ export default async function handler(req, res) {
       return res.status(400).json({ erro: "Prompt vazio" })
     }
 
+    // 🔍 DEBUG: ver se a chave existe
+    if (!process.env.GROQ_API_KEY) {
+      return res.status(500).json({
+        erro: "API KEY não encontrada"
+      })
+    }
+
     const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -22,10 +29,10 @@ export default async function handler(req, res) {
           {
             role: "system",
             content: `
-Você é um gerador de código HTML e CSS.
-Responda APENAS com código.
+Gere apenas HTML + CSS.
 Não escreva explicações.
-Crie algo visual e, se possível, animado.
+Não use markdown.
+Crie algo visual e animado.
 `
           },
           {
@@ -36,21 +43,38 @@ Crie algo visual e, se possível, animado.
       })
     })
 
-    const data = await response.json()
+    // 🔍 DEBUG: ver resposta bruta
+    const text = await response.text()
+    console.log("Resposta bruta:", text)
 
-    const codigo = data?.choices?.[0]?.message?.content
+    let data
 
-    if (!codigo) {
-      throw new Error("Resposta vazia da IA")
+    try {
+      data = JSON.parse(text)
+    } catch {
+      return res.status(500).json({
+        erro: "Resposta inválida da IA",
+        raw: text
+      })
     }
+
+    if (!data.choices || !data.choices[0]) {
+      return res.status(500).json({
+        erro: "IA não retornou código",
+        data
+      })
+    }
+
+    const codigo = data.choices[0].message.content
 
     return res.status(200).json({ codigo })
 
   } catch (erro) {
-    console.error(erro)
+    console.error("ERRO NO BACKEND:", erro)
 
     return res.status(500).json({
-      codigo: `<p style="color:red;">Erro ao gerar código 😢</p>`
+      erro: "Erro interno no servidor",
+      detalhes: erro.message
     })
   }
 }
